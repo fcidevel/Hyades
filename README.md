@@ -4,7 +4,7 @@ _AI-Powered Image Editing and Asset Optimization Tool_
 
 [![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://hyades.jwd-apps.com)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue)](https://www.typescriptlang.org/)
 
 ---
 
@@ -50,7 +50,8 @@ Whether you're a creative professional, a marketing team, or a brand looking to 
 | -------------------------------------------------------------------------------------------------- | ------------------------ |
 | [MongoDB](https://www.mongodb.com/)                                                                | NoSQL database           |
 | [Mongoose](https://mongoosejs.com/)                                                                | MongoDB ODM              |
-| [Next.js API Routes](https://nextjs.org/docs/app/building-your-application/routing/route-handlers) | Serverless API endpoints |
+| [Server Actions](https://nextjs.org/docs/app/getting-started/updating-data)        | Data layer (`lib/actions/`) |
+| [Route Handlers](https://nextjs.org/docs/app/api-reference/file-conventions/route) | Webhook endpoints only      |
 
 ### Services & Integrations
 
@@ -70,6 +71,9 @@ hyades/
 ├── app/                          # Next.js App Router
 │   ├── globals.css               # Global styles
 │   ├── layout.tsx                # Root layout with ClerkProvider
+│   ├── error.tsx                 # Error boundary for non-(root) segments
+│   ├── global-error.tsx          # Last-resort boundary (renders its own <html>)
+│   ├── favicon.ico
 │   ├── (auth)/                   # Authentication routes (grouped)
 │   │   ├── layout.tsx            # Auth layout
 │   │   ├── sign-in/              # Sign in page
@@ -77,15 +81,17 @@ hyades/
 │   ├── (root)/                   # Main app routes (grouped)
 │   │   ├── layout.tsx            # App layout with navigation
 │   │   ├── page.tsx              # Home page with hero & gallery
+│   │   ├── error.tsx             # Error boundary (keeps the Topbar)
+│   │   ├── loading.tsx           # Streaming skeleton
 │   │   ├── credits/              # Credit plans & checkout
 │   │   ├── profile/              # User profile & history
 │   │   └── transformations/      # Image transformation pages
 │   │       ├── [id]/             # View/update transformation
 │   │       └── add/[type]/       # Create new transformation
-│   └── api/                      # API Routes
+│   └── api/                      # Route Handlers
 │       └── webhooks/             # Webhook handlers
-│           ├── clerk/            # Clerk webhook (user sync)
-│           └── stripe/           # Stripe webhook (payments)
+│           ├── clerk/route.ts     # Clerk webhook (user sync)
+│           └── stripe/route.ts    # Stripe webhook (payments)
 │
 ├── components/
 │   ├── shared/                   # Reusable components
@@ -115,19 +121,20 @@ hyades/
 │       └── toaster.tsx
 │
 ├── constants/
-│   └── index.ts                  # App constants (navLinks, plans, transformationTypes)
+│   └── index.ts                  # navLinks, plans, transformationTypes
 │
 ├── hooks/
 │   └── use-toast.ts              # Toast notification hook
 │
 ├── lib/
 │   ├── utils.ts                  # Utility functions
-│   ├── actions/                  # Server actions
+│   ├── errors.ts                 # AppError + toAppError (server error contract)
+│   ├── actions/                  # Server actions - the data layer
 │   │   ├── image.actions.ts      # Image CRUD operations
 │   │   ├── transaction.action.ts # Payment transactions
 │   │   └── user.actions.ts       # User management
 │   └── database/
-│       ├── mongoose.ts           # Database connection
+│       ├── mongoose.ts           # Cached database connection
 │       └── models/               # Mongoose schemas
 │           ├── image.model.ts    # Image model
 │           ├── transaction.model.ts
@@ -141,12 +148,32 @@ hyades/
 ├── types/
 │   └── index.d.ts                # TypeScript type definitions
 │
+├── docs/                         # Review and upgrade notes
+│
+├── proxy.ts                      # Middleware entry point (see below)
+├── build-check.sh                # Vercel Ignored Build Step gate
 ├── components.json               # Shadcn configuration
+├── eslint.config.mjs             # ESLint 9 flat config
 ├── next.config.mjs               # Next.js configuration
+├── postcss.config.mjs            # PostCSS configuration
 ├── tailwind.config.ts            # Tailwind CSS configuration
 ├── tsconfig.json                 # TypeScript configuration
+├── .env.example                  # Environment variable template
 └── package.json                  # Dependencies & scripts
 ```
+
+### Where authentication is enforced
+
+`proxy.ts` at the repository root is the Next.js 16 middleware entry point
+(the role previously filled by `middleware.ts`). It hosts Clerk's
+`clerkMiddleware` and the `createRouteMatcher` public-route list - `/`,
+`/sign-in(.*)`, `/sign-up(.*)` and the two webhook paths. Every other route
+calls `auth.protect()`. If you are looking for where a route becomes public
+or protected, it is there and nowhere else.
+
+`build-check.sh` is the Vercel *Ignored Build Step* script: it exits 1 (build
+proceeds) only when `VERCEL_GIT_COMMIT_REF` is `master`, and exits 0 (build
+cancelled) on every other branch.
 
 ---
 
@@ -200,7 +227,8 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ### Prerequisites
 
-- Node.js 18.x or higher
+- Node.js **20.19 or higher** (Next.js 16.3 requires `>=20.9.0`; the MongoDB
+  driver and Mongoose require `>=20.19.0`, so 20.19 is the effective floor)
 - npm, yarn, or pnpm
 - MongoDB Atlas account
 - Clerk account
@@ -255,17 +283,17 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 | `npm run dev`   | Start development server |
 | `npm run build` | Build for production     |
 | `npm run start` | Start production server  |
-| `npm run lint`  | Run ESLint               |
+| `npm run lint`  | Run ESLint (`eslint .`)  |
 
 ---
 
 ## Credit Plans
 
-| Plan        | Price | Credits | Features                                          |
-| ----------- | ----- | ------- | ------------------------------------------------- |
-| **Free**    | $0    | 10      | Basic access to services                          |
-| **Pro**     | $39   | 200     | Full access + Priority support                    |
-| **Premium** | $199  | 3,000   | Full access + Priority support + Priority updates |
+| Plan                | Price | Credits | Features                                          |
+| ------------------- | ----- | ------- | ------------------------------------------------- |
+| **Free**            | $0    | 10      | Basic access to services                          |
+| **Pro Package**     | $39   | 200     | Full access + Priority support                    |
+| **Premium Package** | $199  | 3,000   | Full access + Priority support + Priority updates |
 
 ---
 
@@ -275,6 +303,54 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 - All payments processed securely through Stripe
 - Webhook signatures verified using Svix
 - Environment variables for sensitive data
+
+---
+
+## Troubleshooting
+
+### `querySrv ECONNREFUSED _mongodb._tcp.<cluster>.mongodb.net`
+
+The app starts, then every page that touches the database fails:
+
+```
+querySrv ECONNREFUSED _mongodb._tcp.hyades.hu6wt.mongodb.net
+```
+
+This is almost never the application, the connection string, or the MongoDB
+Atlas IP allowlist. `mongodb+srv://` requires a DNS SRV lookup, so it is the
+first thing to break when the machine's DNS resolver is unreachable.
+
+Diagnose it - this compares your system resolver against a public one:
+
+```bash
+node -e "const dns=require('dns'); console.log('servers:', dns.getServers()); dns.resolveSrv('_mongodb._tcp.hyades.hu6wt.mongodb.net', (e,r)=>console.log('system:', e ? e.code : r.length+' records')); const R=new dns.Resolver(); R.setServers(['8.8.8.8']); R.resolveSrv('_mongodb._tcp.hyades.hu6wt.mongodb.net', (e,r)=>console.log('8.8.8.8:', e ? e.code : r.length+' records'));"
+```
+
+If `system:` reports `ECONNREFUSED` while `8.8.8.8:` returns records, DNS on
+the host is broken and MongoDB is fine. A `servers: [ '127.0.0.1' ]` result
+means the machine points at a local DNS proxy that is not currently listening
+- typically a stopped Pi-hole, AdGuard Home, dnscrypt-proxy, Docker DNS or a
+VPN stub resolver.
+
+To fix it:
+
+1. Find what should own port 53 on loopback and whether it is running:
+   `netstat -ano | findstr :53` (Windows), then check that service.
+2. Start it again, or point the network adapter at a working resolver.
+3. Re-run the command above and confirm `system:` now returns records.
+
+Restarting the dev server is not required to recover: a failed connection
+attempt is no longer cached, so requests succeed again as soon as DNS does.
+
+> Rewriting `lib/database/mongoose.ts` to a non-SRV `mongodb://` seed list
+> also sidesteps the SRV lookup, but it hard-codes shard hostnames that Atlas
+> is free to change. Treat it as an emergency fallback, not a fix.
+
+### The page shows "We can't reach the image library right now"
+
+That is the error boundary in `app/(root)/error.tsx` doing its job: the
+database was unreachable. Check the server console for the underlying cause
+(logged with its full `cause` chain) and see the entry above.
 
 ---
 
