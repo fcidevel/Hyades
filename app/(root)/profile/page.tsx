@@ -31,15 +31,15 @@ const Profile = async ({ searchParams }: SearchParamProps) => {
           <p className="p-14-medium md:p-16-medium">IMAGE MANIPULATION DONE</p>
           <div className="mt-4 flex items-center gap-4">
             <i className="bi bi-vignette text-5xl text-orange-400"></i>
-            <h2 className="h2-bold text-dark-600">{images?.data.length}</h2>
+            <h2 className="h2-bold text-dark-600">{images.data.length}</h2>
           </div>
         </div>
       </section>
 
       <section className="mt-8 md:mt-14">
         <Collection
-          images={images?.data}
-          totalPages={images?.totalPages}
+          images={images.data}
+          totalPages={images.totalPages}
           page={page}
         />
       </section>

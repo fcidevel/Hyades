@@ -29,6 +29,7 @@ import { getCldImageUrl } from "next-cloudinary";
 import { addImage, updateImage } from "@/lib/actions/image.actions";
 import { useRouter } from "next/navigation";
 import { InsufficientCreditsModal } from "./InsufficientCreditsModal";
+import { useToast } from "@/hooks/use-toast";
 
 export const formSchema = z.object({
   title: z.string(),
@@ -55,6 +56,7 @@ export default function TransformationForm({
   const [transformationConfig, setTransformationConfig] = useState(config);
   const [, startTransition] = useTransition();
   const router = useRouter();
+  const { toast } = useToast();
 
   const initialValues =
     data && action === "Update"
@@ -105,13 +107,17 @@ export default function TransformationForm({
             path: "/",
           });
 
-          if (newImage) {
-            form.reset();
-            setImage(data);
-            router.push(`/transformations/${newImage._id}`);
-          }
+          form.reset();
+          setImage(data);
+          router.push(`/transformations/${newImage._id}`);
         } catch (error) {
-          console.log(error);
+          console.error("[TransformationForm:add]", error);
+          toast({
+            title: "Could not save your image",
+            description: "We couldn't save this transformation. Please try again.",
+            duration: 5000,
+            className: "error-toast",
+          });
         }
       }
 
@@ -123,11 +129,15 @@ export default function TransformationForm({
             path: `/transformations/${data._id}`,
           });
 
-          if (updatedImage) {
-            router.push(`/transformations/${updatedImage._id}`);
-          }
+          router.push(`/transformations/${updatedImage._id}`);
         } catch (error) {
-          console.log(error);
+          console.error("[TransformationForm:update]", error);
+          toast({
+            title: "Could not update your image",
+            description: "We couldn't save your changes. Please try again.",
+            duration: 5000,
+            className: "error-toast",
+          });
         }
       }
     }
@@ -180,7 +190,17 @@ export default function TransformationForm({
     setNewTransformation(null);
 
     startTransition(async () => {
-      await updateCredits(userId, creditFee);
+      try {
+        await updateCredits(userId, creditFee);
+      } catch (error) {
+        console.error("[TransformationForm:updateCredits]", error);
+        toast({
+          title: "Credit update failed",
+          description: "Your transformation ran, but we couldn't update your credit balance.",
+          duration: 5000,
+          className: "error-toast",
+        });
+      }
     });
   };
 

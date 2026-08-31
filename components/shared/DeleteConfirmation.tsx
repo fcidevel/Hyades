@@ -14,11 +14,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { deleteImage } from "@/lib/actions/image.actions";
+import { useToast } from "@/hooks/use-toast";
 
 import { Button } from "../ui/button";
 
 export const DeleteConfirmation = ({ imageId }: { imageId: string }) => {
   const [isPending, startTransition] = useTransition();
+  const { toast } = useToast();
 
   return (
     <AlertDialog>
@@ -48,7 +50,17 @@ export const DeleteConfirmation = ({ imageId }: { imageId: string }) => {
             className="border !bg-red-500 text-white hover:!bg-red-600"
             onClick={() =>
               startTransition(async () => {
-                await deleteImage(imageId);
+                try {
+                  await deleteImage(imageId);
+                } catch (error) {
+                  console.error("[DeleteConfirmation]", error);
+                  toast({
+                    title: "Could not delete this image",
+                    description: "Please try again in a moment.",
+                    duration: 5000,
+                    className: "error-toast",
+                  });
+                }
               })
             }
           >

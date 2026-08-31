@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import Stripe from "stripe";
-import { handleError } from "../utils";
+import { toAppError } from "../errors";
 import { connectToDatabase } from "../database/mongoose";
 import Transaction from "../database/models/transaction.model";
 import { updateCredits } from "./user.actions";
@@ -50,6 +50,6 @@ export async function createTransaction(transaction: CreateTransactionParams) {
 
     return JSON.parse(JSON.stringify(newTransaction));
   } catch (error) {
-    handleError(error);
+    throw toAppError("createTransaction", error);
   }
 }

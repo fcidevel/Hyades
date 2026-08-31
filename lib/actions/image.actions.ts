@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { connectToDatabase } from "../database/mongoose";
-import { handleError } from "../utils";
+import { AppError, toAppError } from "../errors";
 import { redirect } from "next/navigation";
 import User from "../database/models/user.model";
 import Image from "../database/models/image.model";
@@ -22,7 +22,7 @@ export async function addImage({ image, userId, path }: AddImageParams) {
 
     const author = await User.findById(userId);
     if (!author) {
-      throw new Error("User not found!");
+      throw new AppError("User not found!", { code: "NOT_FOUND" });
     }
 
     const newImage = await Image.create({ ...image, author: author._id });
@@ -30,7 +30,7 @@ export async function addImage({ image, userId, path }: AddImageParams) {
     revalidatePath(path);
     return JSON.parse(JSON.stringify(newImage));
   } catch (error) {
-    handleError(error);
+    throw toAppError("addImage", error);
   }
 }
 
@@ -41,11 +41,11 @@ export async function updateImage({ image, userId, path }: UpdateImageParams) {
 
     const imageToUpdate = await Image.findById(image._id);
     if (!imageToUpdate) {
-      throw new Error("Image not found!");
+      throw new AppError("Image not found!", { code: "NOT_FOUND" });
     }
 
     if (imageToUpdate.author.toHexString() !== userId) {
-      throw new Error("Unauthorized user!");
+      throw new AppError("Unauthorized user!", { code: "UNAUTHORIZED" });
     }
 
     const updateImage = await Image.findByIdAndUpdate(
@@ -57,7 +57,7 @@ export async function updateImage({ image, userId, path }: UpdateImageParams) {
     revalidatePath(path);
     return JSON.parse(JSON.stringify(updateImage));
   } catch (error) {
-    handleError(error);
+    throw toAppError("updateImage", error);
   }
 }
 
@@ -67,10 +67,13 @@ export async function deleteImage(imageId: string) {
     await connectToDatabase();
     await Image.findByIdAndDelete(imageId);
   } catch (error) {
-    handleError(error);
-  } finally {
-    redirect("/");
+    throw toAppError("deleteImage", error);
   }
+
+  // redirect() signals by throwing. Inside `finally` it overrode the error
+  // raised in `catch`, so a failed delete still navigated home as though it
+  // had succeeded. It has to run only on the success path.
+  redirect("/");
 }
 
 // GET IMAGE
@@ -80,11 +83,12 @@ export async function getImageById(imageId: string) {
 
     const image = await populateUser(Image.findById(imageId));
 
-    if (!image) throw new Error("Image not found!");
+    if (!image)
+      throw new AppError("Image not found!", { code: "NOT_FOUND" });
 
     return JSON.parse(JSON.stringify(image));
   } catch (error) {
-    handleError(error);
+    throw toAppError("getImageById", error);
   }
 }
 
@@ -145,7 +149,7 @@ export async function getAllImages({
       savedImages,
     };
   } catch (error) {
-    handleError(error);
+    throw toAppError("getAllImages", error);
   }
 }
 
@@ -176,6 +180,6 @@ export async function getUserImages({
       totalPages: Math.ceil(totalImages / limit),
     };
   } catch (error) {
-    handleError(error);
+    throw toAppError("getUserImages", error);
   }
 }

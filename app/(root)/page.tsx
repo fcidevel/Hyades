@@ -60,8 +60,8 @@ export default async function Home({ searchParams }: SearchParamProps) {
       <SignedIn>
         <Collection
           hasSearch={true}
-          images={images?.data}
-          totalPages={images?.totalPage}
+          images={images.data}
+          totalPages={images.totalPage}
           page={page}
         />
       </SignedIn>
