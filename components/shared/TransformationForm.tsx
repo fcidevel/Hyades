@@ -32,7 +32,7 @@ import { InsufficientCreditsModal } from "./InsufficientCreditsModal";
 import { useToast } from "@/hooks/use-toast";
 
 export const formSchema = z.object({
-  title: z.string(),
+  title: z.string().trim().min(1, "Please enter an image title"),
   aspectRatio: z.string().optional(),
   color: z.string().optional(),
   prompt: z.string().optional(),
