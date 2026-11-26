@@ -2,10 +2,6 @@
 
 import { redirect } from "next/navigation";
 import Stripe from "stripe";
-import { toAppError } from "../errors";
-import { connectToDatabase } from "../database/mongoose";
-import Transaction from "../database/models/transaction.model";
-import { updateCredits } from "./user.actions";
 
 export async function checkoutCredits(transaction: CheckoutTransactionParams) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
@@ -35,21 +31,4 @@ export async function checkoutCredits(transaction: CheckoutTransactionParams) {
   });
 
   redirect(session.url!);
-}
-
-export async function createTransaction(transaction: CreateTransactionParams) {
-  try {
-    await connectToDatabase();
-
-    const newTransaction = await Transaction.create({
-      ...transaction,
-      buyer: transaction.buyerId,
-    });
-
-    await updateCredits(transaction.buyerId, transaction.credits);
-
-    return JSON.parse(JSON.stringify(newTransaction));
-  } catch (error) {
-    throw toAppError("createTransaction", error);
-  }
 }

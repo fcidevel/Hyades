@@ -144,6 +144,7 @@ hyades/
 │   │   └── user.actions.ts       # User management
 │   └── database/
 │       ├── mongoose.ts           # Cached database connection
+│       ├── transactions.ts       # Stripe purchases (server-only)
 │       └── models/               # Mongoose schemas
 │           ├── image.model.ts    # Image model
 │           ├── transaction.model.ts

@@ -1,4 +1,4 @@
-import { createTransaction } from "@/lib/actions/transaction.action";
+import { createTransaction } from "@/lib/database/transactions";
 import { NextResponse } from "next/server";
 import stripe from "stripe";
 

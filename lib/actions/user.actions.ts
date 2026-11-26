@@ -1,6 +1,8 @@
 "use server";
 
+import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
+import { creditFee } from "@/constants";
 import User from "../database/models/user.model";
 import { connectToDatabase } from "../database/mongoose";
 import { AppError, toAppError } from "../errors";
@@ -74,21 +76,29 @@ export async function deleteUser(clerkId: string) {
 }
 
 // USE CREDITS
-export async function updateCredits(userId: string, creditFee: number) {
+// Every export of a "use server" file can be called from the browser with any arguments, so this
+// action takes none: the user comes from the Clerk session and the fee from `creditFee`. Purchased
+// credits are added only by the Stripe webhook, through `lib/database/transactions.ts`.
+export async function chargeCreditFee() {
+  const { userId: clerkId } = await auth();
+  if (!clerkId) {
+    throw new AppError("Sign in to use credits", { code: "UNAUTHORIZED" });
+  }
+
   try {
     await connectToDatabase();
 
-    const updatedUserCredits = await User.findOneAndUpdate(
-      { _id: userId },
-      { $inc: { creditBalance: creditFee } },
-      { new: true }
+    const fee = Math.abs(creditFee);
+    const user = await User.findOneAndUpdate(
+      { clerkId, creditBalance: { $gte: fee } },
+      { $inc: { creditBalance: -fee } },
+      { returnDocument: "after" }
     );
 
-    if (!updatedUserCredits)
-      throw new AppError("User credits update failed", { code: "NOT_FOUND" });
+    if (!user) throw new AppError("Not enough credits");
 
-    return JSON.parse(JSON.stringify(updatedUserCredits));
+    return { creditBalance: user.creditBalance as number };
   } catch (error) {
-    throw toAppError("updateCredits", error);
+    throw toAppError("chargeCreditFee", error);
   }
 }

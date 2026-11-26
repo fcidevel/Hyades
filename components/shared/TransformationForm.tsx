@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { CustomField } from "./CustomField";
 import { useEffect, useState, useTransition } from "react";
 import { AspectRatioKey, debounce, deepMergeObjects } from "@/lib/utils";
-import { updateCredits } from "@/lib/actions/user.actions";
+import { chargeCreditFee } from "@/lib/actions/user.actions";
 import MediaUploader from "./MediaUploader";
 import TransformedImage from "./TransformedImage";
 import {
@@ -191,9 +191,9 @@ export default function TransformationForm({
 
     startTransition(async () => {
       try {
-        await updateCredits(userId, creditFee);
+        await chargeCreditFee();
       } catch (error) {
-        console.error("[TransformationForm:updateCredits]", error);
+        console.error("[TransformationForm:chargeCreditFee]", error);
         toast({
           title: "Credit update failed",
           description: "Your transformation ran, but we couldn't update your credit balance.",
