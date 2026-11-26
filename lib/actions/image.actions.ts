@@ -1,5 +1,6 @@
 "use server";
 
+import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { connectToDatabase } from "../database/mongoose";
 import { AppError, toAppError } from "../errors";
@@ -14,6 +15,19 @@ const populateUser = (query: any) =>
     model: User,
     select: "_id firstName lastName clerkId",
   });
+
+// The signed-in user's record. Every export of a "use server" file can be called from the browser
+// with any arguments, so the actions below take the user from the Clerk session instead.
+async function getSignedInUser() {
+  const { userId: clerkId } = await auth();
+  if (!clerkId) throw new AppError("Sign in first", { code: "UNAUTHORIZED" });
+
+  await connectToDatabase();
+  const user = await User.findOne({ clerkId });
+  if (!user) throw new AppError("User not found!", { code: "NOT_FOUND" });
+
+  return user;
+}
 
 // ADD IMAGE
 export async function addImage({ image, userId, path }: AddImageParams) {
@@ -64,8 +78,16 @@ export async function updateImage({ image, userId, path }: UpdateImageParams) {
 // DELETE IMAGE
 export async function deleteImage(imageId: string) {
   try {
-    await connectToDatabase();
-    await Image.findByIdAndDelete(imageId);
+    const user = await getSignedInUser();
+
+    const image = await Image.findById(imageId);
+    if (!image) throw new AppError("Image not found!", { code: "NOT_FOUND" });
+
+    if (String(image.author) !== String(user._id)) {
+      throw new AppError("Unauthorized user!", { code: "UNAUTHORIZED" });
+    }
+
+    await Image.findByIdAndDelete(image._id);
   } catch (error) {
     throw toAppError("deleteImage", error);
   }
