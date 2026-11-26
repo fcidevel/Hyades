@@ -172,7 +172,7 @@ calls `auth.protect()`. If you are looking for where a route becomes public
 or protected, it is there and nowhere else.
 
 `build-check.sh` is the Vercel *Ignored Build Step* script: it exits 1 (build
-proceeds) only when `VERCEL_GIT_COMMIT_REF` is `master`, and exits 0 (build
+proceeds) only when `VERCEL_GIT_COMMIT_REF` is `main`, and exits 0 (build
 cancelled) on every other branch.
 
 ---
@@ -354,12 +354,18 @@ database was unreachable. Check the server console for the underlying cause
 
 ---
 
-## License
+## Author
 
-This project is private and proprietary.
+Built with ❤️ by [FCI Devel](https://fcidevel.com)
 
 ---
 
-## Author
+## License
 
-Made with ❤️ by [JordacheWD](https://jordachewd.com/)
+Source-available, not open source. The code is public so that prospective clients,
+partners and employers can review how FCI Devel builds software: you may read it, and
+clone and run it on your own devices for that review, but you may not reuse it.
+Contributions are not accepted, and security issues are reported privately as the
+licence describes.
+
+See [LICENSE](LICENSE) for the full terms.
