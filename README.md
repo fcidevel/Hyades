@@ -141,10 +141,11 @@ hyades/
 │   ├── actions/                  # Server actions - the data layer
 │   │   ├── image.actions.ts      # Image CRUD operations
 │   │   ├── transaction.action.ts # Payment transactions
-│   │   └── user.actions.ts       # User management
+│   │   └── user.actions.ts       # User lookup and credit fee
 │   └── database/
 │       ├── mongoose.ts           # Cached database connection
 │       ├── transactions.ts       # Stripe purchases (server-only)
+│       ├── users.ts              # Clerk user sync (server-only)
 │       └── models/               # Mongoose schemas
 │           ├── image.model.ts    # Image model
 │           ├── transaction.model.ts
