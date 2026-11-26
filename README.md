@@ -5,6 +5,7 @@ _AI-Powered Image Editing and Asset Optimization Tool_
 [![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://hyades.jwd-apps.com)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue)](https://www.typescriptlang.org/)
+[![Secret scan](https://github.com/fcidevel/Hyades/actions/workflows/gitleaks.yml/badge.svg?branch=main)](https://github.com/fcidevel/Hyades/actions/workflows/gitleaks.yml)
 
 ---
 
@@ -61,6 +62,14 @@ Whether you're a creative professional, a marketing team, or a brand looking to 
 | [Clerk](https://clerk.com/)           | Authentication & user management |
 | [Stripe](https://stripe.com/)         | Payment processing               |
 | [Svix](https://www.svix.com/)         | Webhook handling                 |
+| [Vercel](https://vercel.com/)         | Hosting                          |
+
+### Tooling
+
+| Technology                                       | Purpose                                                                                     |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| [gitleaks](https://github.com/gitleaks/gitleaks) | Mandatory secret scanning (git hooks + CI) - see [Secret scanning](#secret-scanning-mandatory) |
+| [ESLint 9](https://eslint.org/)                  | Linting (flat config, `next/core-web-vitals` rules)                                         |
 
 ---
 
@@ -148,17 +157,27 @@ hyades/
 ├── types/
 │   └── index.d.ts                # TypeScript type definitions
 │
-├── docs/                         # Review and upgrade notes
+├── .githooks/
+│   ├── pre-commit                # gitleaks scan of the staged changes
+│   └── pre-push                  # gitleaks scan of every commit being pushed
+├── .github/
+│   └── workflows/
+│       └── gitleaks.yml          # "Secret scan" CI job (full history)
 │
 ├── proxy.ts                      # Middleware entry point (see below)
-├── build-check.sh                # Vercel Ignored Build Step gate
+├── build-check.sh                # Vercel ignored-build-step script (builds main only)
 ├── components.json               # Shadcn configuration
 ├── eslint.config.mjs             # ESLint 9 flat config
 ├── next.config.mjs               # Next.js configuration
 ├── postcss.config.mjs            # PostCSS configuration
 ├── tailwind.config.ts            # Tailwind CSS configuration
 ├── tsconfig.json                 # TypeScript configuration
-└── package.json                  # Dependencies & scripts
+├── .gitleaks.toml                # gitleaks rules (built-in + project-specific)
+├── .gitleaksignore               # Reviewed findings, ignored by fingerprint
+├── .gitattributes                # LF line endings for the git hooks
+├── package.json                  # Dependencies & scripts
+├── package-lock.json
+└── LICENSE                       # FCI Devel Reference Licence
 ```
 
 ### Where authentication is enforced
@@ -168,120 +187,12 @@ hyades/
 `clerkMiddleware` and the `createRouteMatcher` public-route list - `/`,
 `/sign-in(.*)`, `/sign-up(.*)` and the two webhook paths. Every other route
 calls `auth.protect()`. If you are looking for where a route becomes public
-or protected, it is there and nowhere else.
+or protected, it is there; the pages that need a signed-in user also call
+`auth()` and redirect signed-out visitors to `/sign-in`.
 
 `build-check.sh` is the Vercel *Ignored Build Step* script: it exits 1 (build
 proceeds) only when `VERCEL_GIT_COMMIT_REF` is `main`, and exits 0 (build
 cancelled) on every other branch.
-
----
-
-## Environment Variables
-
-Create a `.env.local` file in the root directory with the following variables:
-
-```env
-# ===================
-# App Configuration
-# ===================
-NEXT_PUBLIC_SERVER_URL=http://localhost:3000
-
-# ===================
-# MongoDB
-# ===================
-MONGODB_URL=mongodb+srv://username:password@cluster.mongodb.net/hyades
-
-# ===================
-# Clerk Authentication
-# ===================
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-CLERK_SECRET_KEY=sk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
-NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/
-NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/
-
-# ===================
-# Cloudinary
-# ===================
-NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your-cloud-name
-CLOUDINARY_API_KEY=123456789012345
-CLOUDINARY_API_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-# ===================
-# Stripe Payments
-# ===================
-STRIPE_SECRET_KEY=sk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-```
-
-> ⚠️ **Note:** Never commit your `.env.local` file to version control. Make sure it's listed in your `.gitignore`.
-
----
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js **20.19 or higher** (Next.js 16.3 requires `>=20.9.0`; the MongoDB
-  driver and Mongoose require `>=20.19.0`, so 20.19 is the effective floor)
-- npm, yarn, or pnpm
-- MongoDB Atlas account
-- Clerk account
-- Cloudinary account
-- Stripe account
-
-### Installation
-
-1. **Clone the repository**
-
-   ```bash
-   git clone https://github.com/yourusername/hyades.git
-   cd hyades
-   ```
-
-2. **Install dependencies**
-
-   ```bash
-   npm install
-   # or
-   yarn install
-   # or
-   pnpm install
-   ```
-
-3. **Set up environment variables**
-   - Fill in your credentials (see Environment Variables)
-
-4. **Set up webhooks**
-   - Configure Clerk webhook endpoint: `https://yourdomain.com/api/webhooks/clerk`
-   - Configure Stripe webhook endpoint: `https://yourdomain.com/api/webhooks/stripe`
-
-5. **Run the development server**
-
-   ```bash
-   npm run dev
-   # or
-   yarn dev
-   # or
-   pnpm dev
-   ```
-
-6. **Open [http://localhost:3000](http://localhost:3000)** in your browser
-
----
-
-## Available Scripts
-
-| Script          | Description              |
-| --------------- | ------------------------ |
-| `npm run dev`   | Start development server |
-| `npm run build` | Build for production     |
-| `npm run start` | Start production server  |
-| `npm run lint`  | Run ESLint (`eslint .`)  |
 
 ---
 
@@ -295,60 +206,58 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ---
 
-## Security
+## Secret scanning (mandatory)
 
-- Authentication handled by Clerk with enterprise-grade security
-- All payments processed securely through Stripe
-- Webhook signatures verified using Svix
-- Environment variables for sensitive data
+Every change is checked for leaked credentials with
+[gitleaks](https://github.com/gitleaks/gitleaks), at three layers:
+
+| Layer  | What runs                                                                                                    | What it blocks                          |
+| ------ | ------------------------------------------------------------------------------------------------------------ | --------------------------------------- |
+| Commit | `.githooks/pre-commit` - scans the staged changes                                                            | the commit                              |
+| Push   | `.githooks/pre-push` - scans every commit being pushed                                                       | the push                                |
+| GitHub | `Secret scan` job (`.github/workflows/gitleaks.yml`) - scans the full history on every push and pull request | updating `main` (required status check) |
+
+- **No credentials in the source code.** The app reads them from its deployment
+  environment.
+- **Project-specific rules.** [`.gitleaks.toml`](.gitleaks.toml) keeps every built-in
+  gitleaks rule and adds four for credential formats of the services this project
+  uses: webhook signing secrets (Stripe and Clerk), MongoDB connection strings with an
+  embedded password, Cloudinary `cloudinary://` URLs, and Context7 API keys.
+- **Hooks on by default.** Installing the dependencies switches the hooks on for that
+  clone.
+- **Supply-chain hardening.** The CI job pins `actions/checkout` to a commit SHA and
+  verifies the gitleaks release binary against its published checksum.
+- **Leaked-secret policy.** A secret that ever reaches GitHub is treated as
+  compromised and rotated at the source immediately.
 
 ---
 
-## Troubleshooting
+## Security
 
-### `querySrv ECONNREFUSED _mongodb._tcp.<cluster>.mongodb.net`
+### Application
 
-The app starts, then every page that touches the database fails:
+- **Route protection** - every route outside the public list in [`proxy.ts`](proxy.ts)
+  requires a signed-in user (Clerk `auth.protect()`); see
+  [Where authentication is enforced](#where-authentication-is-enforced).
+- **Signed webhooks** - Clerk events are verified with Svix
+  ([`app/api/webhooks/clerk/route.ts`](app/api/webhooks/clerk/route.ts)) and Stripe
+  events with `stripe.webhooks.constructEvent()`
+  ([`app/api/webhooks/stripe/route.ts`](app/api/webhooks/stripe/route.ts)); an event
+  that fails verification is not processed.
+- **Hosted checkout** - credit purchases run on Stripe Checkout, so card details are
+  entered on Stripe's page and never reach this app.
 
-```
-querySrv ECONNREFUSED _mongodb._tcp.hyades.hu6wt.mongodb.net
-```
+### Repository protection
 
-This is almost never the application, the connection string, or the MongoDB
-Atlas IP allowlist. `mongodb+srv://` requires a DNS SRV lookup, so it is the
-first thing to break when the machine's DNS resolver is unreachable.
+Only the repository owner can change this repository. Two GitHub rulesets enforce it:
 
-Diagnose it - this compares your system resolver against a public one:
+| Ruleset          | Applies to              | Rules                                                         | Bypass                          |
+| ---------------- | ----------------------- | ------------------------------------------------------------- | ------------------------------- |
+| Owner Only Rule  | all branches            | restrict creations, updates and deletions; block force pushes | repository admin (the owner)    |
+| Secret Scan Rule | default branch (`main`) | `Secret scan` must pass; block deletions and force pushes     | none - applies to the owner too |
 
-```bash
-node -e "const dns=require('dns'); console.log('servers:', dns.getServers()); dns.resolveSrv('_mongodb._tcp.hyades.hu6wt.mongodb.net', (e,r)=>console.log('system:', e ? e.code : r.length+' records')); const R=new dns.Resolver(); R.setServers(['8.8.8.8']); R.resolveSrv('_mongodb._tcp.hyades.hu6wt.mongodb.net', (e,r)=>console.log('8.8.8.8:', e ? e.code : r.length+' records'));"
-```
-
-If `system:` reports `ECONNREFUSED` while `8.8.8.8:` returns records, DNS on
-the host is broken and MongoDB is fine. A `servers: [ '127.0.0.1' ]` result
-means the machine points at a local DNS proxy that is not currently listening
-- typically a stopped Pi-hole, AdGuard Home, dnscrypt-proxy, Docker DNS or a
-VPN stub resolver.
-
-To fix it:
-
-1. Find what should own port 53 on loopback and whether it is running:
-   `netstat -ano | findstr :53` (Windows), then check that service.
-2. Start it again, or point the network adapter at a working resolver.
-3. Re-run the command above and confirm `system:` now returns records.
-
-Restarting the dev server is not required to recover: a failed connection
-attempt is no longer cached, so requests succeed again as soon as DNS does.
-
-> Rewriting `lib/database/mongoose.ts` to a non-SRV `mongodb://` seed list
-> also sidesteps the SRV lookup, but it hard-codes shard hostnames that Atlas
-> is free to change. Treat it as an emergency fallback, not a fix.
-
-### The page shows "We can't reach the image library right now"
-
-That is the error boundary in `app/(root)/error.tsx` doing its job: the
-database was unreachable. Check the server console for the underlying cause
-(logged with its full `cause` chain) and see the entry above.
+A commit can reach `main` only after `Secret scan` has passed on it, and nobody can
+force-push or delete `main`.
 
 ---
 
