@@ -1,0 +1,88 @@
+# Gitleaks configuration for Hyades.
+# Picked up automatically from the repo root by `gitleaks git .` and `gitleaks dir .`,
+# by the pre-commit and pre-push hooks in .githooks/ and by
+# .github/workflows/gitleaks.yml. Secret scanning is mandatory - see the
+# "Secret scanning (mandatory)" section of README.md.
+#
+# Docs: https://github.com/gitleaks/gitleaks#configuration
+
+title = "Hyades gitleaks config"
+
+# The [[allowlists]] syntax below needs gitleaks v8.25.0 or newer.
+minVersion = "v8.25.0"
+
+# Keep every built-in rule; the entries below only add to them.
+[extend]
+useDefault = true
+
+# Webhook signing secrets used by this app: STRIPE_WEBHOOK_SECRET (Stripe,
+# "whsec_" + alphanumerics) and WEBHOOK_SECRET (Clerk / Svix, "whsec_" +
+# base64). The built-in generic-api-key rule catches them only next to a keyword
+# such as "secret", and misses base64 values that contain "+" or "/"; this
+# catches both forms anywhere.
+# Base64 may end in "=" padding, so the match ends on a delimiter outside the
+# secret group instead of on \b.
+[[rules]]
+id = "webhook-signing-secret"
+description = "Webhook signing secret (Stripe, Svix / Clerk)"
+regex = '''\b(whsec_[A-Za-z0-9+/]{24,128}={0,2})(?:[^A-Za-z0-9+/=]|$)'''
+secretGroup = 1
+entropy = 3.5
+keywords = ["whsec_"]
+tags = ["stripe", "svix", "clerk", "webhook"]
+
+# MongoDB connection strings with an embedded password (MONGODB_URL). No
+# built-in rule covers them, not even next to a keyword. The secret is the
+# password. MongoDB requires $ : / ? # [ ] @ in credentials to be
+# percent-encoded, so placeholders such as <password> or ${MONGO_PASSWORD}
+# never match; the entropy threshold skips documentation values such as
+# "password".
+[[rules]]
+id = "mongodb-connection-string"
+description = "MongoDB connection string with an embedded password"
+regex = '''\bmongodb(?:\+srv)?://[^:/?#@\s'"<>${}]+:([^@/?#\s'"<>${}]+)@[^\s'"<>]+'''
+secretGroup = 1
+entropy = 3.0
+keywords = ["mongodb"]
+tags = ["mongodb", "database", "connection-string"]
+
+# Cloudinary credentials in URL form ("cloudinary://<api key>:<api secret>@<cloud
+# name>"), which the Cloudinary SDK reads from CLOUDINARY_URL. No built-in rule
+# covers it, not even next to a keyword. The secret is the API secret. The
+# separate values have no vendor-specific shape: generic-api-key catches
+# CLOUDINARY_API_SECRET next to a keyword, and no rule can tell the 15-digit
+# CLOUDINARY_API_KEY from any other number.
+[[rules]]
+id = "cloudinary-url"
+description = "Cloudinary API environment variable (cloudinary:// URL with API secret)"
+regex = '''\bcloudinary://[0-9]{6,20}:([A-Za-z0-9_-]{20,64})@[A-Za-z0-9_.-]+'''
+secretGroup = 1
+entropy = 3.5
+keywords = ["cloudinary://"]
+tags = ["cloudinary", "api-key"]
+
+# Context7 API keys ("ctx7sk-" + a UUID), used by the MCP server configuration
+# of the development tooling. No built-in rule covers them; generic-api-key only
+# catches them next to a keyword. The entropy threshold skips all-zero and
+# repeated-character placeholders.
+[[rules]]
+id = "context7-api-key"
+description = "Context7 API key"
+regex = '''\b(ctx7sk-[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\b'''
+secretGroup = 1
+entropy = 3.3
+keywords = ["ctx7sk"]
+tags = ["context7", "mcp", "api-key"]
+
+# Next.js build output. Without this, `gitleaks dir .` reports Next.js's own
+# per-build keys under .next/ (previewModeSigningKey, previewModeEncryptionKey,
+# Server Action encryptionKey) and other build artefacts. node_modules/ needs no
+# entry: gitleaks' built-in allowlist already skips it.
+# Note: global allowlists apply in EVERY mode (dir, git, pre-commit hook, CI), so
+# this path is also exempt there. Keep the list to folders that are never
+# committed; never add .env* or .vercel/ (`vercel pull` writes real secrets there).
+[[allowlists]]
+description = "Next.js build output (gitignored)"
+paths = [
+  '''(^|[\\/])\.next([\\/]|$)''',
+]

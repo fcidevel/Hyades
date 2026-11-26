@@ -1,0 +1,4 @@
+# MongoDB connection string committed in 0f25ea4 and deleted in a3965bd (2025-12-10).
+# The database user was rotated in MongoDB Atlas on 2026-11-26; the commit stays reachable from
+# pull-request refs, so it is ignored by fingerprint rather than removed from history.
+0f25ea4b72bab0147ab3e307ed39ff348e589fc8:.projectInfo/Hyades_MongoDB_access.txt:mongodb-connection-string:5
