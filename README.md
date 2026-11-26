@@ -247,6 +247,13 @@ Every change is checked for leaked credentials with
 - **Hosted checkout** - credit purchases run on Stripe Checkout, so card details are
   entered on Stripe's page and never reach this app.
 
+### Runtime
+
+The app is pinned to the **Node.js 24.x** LTS line through the `engines` field in
+[`package.json`](package.json), matching the hosting setting. Development uses
+**v24.22.3** or later, which includes the
+[November 2026 Node.js security release](https://nodejs.org/en/blog/vulnerability/november-2026-security-releases).
+
 ### Repository protection
 
 Only the repository owner can change this repository. Two GitHub rulesets enforce it:
