@@ -26,7 +26,6 @@ const Page = async ({ params }: SearchParamProps) => {
       <section className="mt-10">
         <TransformationForm
           action="Update"
-          userId={user._id}
           type={image.transformationType as TransformationTypeKey}
           creditBalance={user.creditBalance}
           config={image.config}

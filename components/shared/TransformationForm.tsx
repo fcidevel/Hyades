@@ -42,7 +42,6 @@ export const formSchema = z.object({
 export default function TransformationForm({
   action,
   data = null,
-  userId,
   type,
   creditBalance,
   config = null,
@@ -103,7 +102,6 @@ export default function TransformationForm({
         try {
           const newImage = await addImage({
             image: imageData,
-            userId,
             path: "/",
           });
 
@@ -125,7 +123,6 @@ export default function TransformationForm({
         try {
           const updatedImage = await updateImage({
             image: { ...imageData, _id: data._id },
-            userId,
             path: `/transformations/${data._id}`,
           });
 

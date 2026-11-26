@@ -30,14 +30,9 @@ async function getSignedInUser() {
 }
 
 // ADD IMAGE
-export async function addImage({ image, userId, path }: AddImageParams) {
+export async function addImage({ image, path }: AddImageParams) {
   try {
-    await connectToDatabase();
-
-    const author = await User.findById(userId);
-    if (!author) {
-      throw new AppError("User not found!", { code: "NOT_FOUND" });
-    }
+    const author = await getSignedInUser();
 
     const newImage = await Image.create({ ...image, author: author._id });
 
@@ -49,22 +44,23 @@ export async function addImage({ image, userId, path }: AddImageParams) {
 }
 
 // UPDATE IMAGE
-export async function updateImage({ image, userId, path }: UpdateImageParams) {
+export async function updateImage({ image, path }: UpdateImageParams) {
   try {
-    await connectToDatabase();
+    const user = await getSignedInUser();
 
     const imageToUpdate = await Image.findById(image._id);
     if (!imageToUpdate) {
       throw new AppError("Image not found!", { code: "NOT_FOUND" });
     }
 
-    if (imageToUpdate.author.toHexString() !== userId) {
+    if (String(imageToUpdate.author) !== String(user._id)) {
       throw new AppError("Unauthorized user!", { code: "UNAUTHORIZED" });
     }
 
+    // The stored author stays, whatever the request body says.
     const updateImage = await Image.findByIdAndUpdate(
       imageToUpdate._id,
-      image,
+      { ...image, author: imageToUpdate.author },
       { new: true }
     );
 
