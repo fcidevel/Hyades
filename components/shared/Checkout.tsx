@@ -8,17 +8,7 @@ import { checkoutCredits } from "@/lib/actions/transaction.action";
 
 import { Button } from "../ui/button";
 
-const Checkout = ({
-  plan,
-  amount,
-  credits,
-  buyerId,
-}: {
-  plan: string;
-  amount: number;
-  credits: number;
-  buyerId: string;
-}) => {
+const Checkout = ({ planId }: { planId: number }) => {
   const { toast } = useToast();
 
   useEffect(() => {
@@ -48,14 +38,7 @@ const Checkout = ({
   }, [toast]);
 
   const onCheckout = async () => {
-    const transaction = {
-      plan,
-      amount,
-      credits,
-      buyerId,
-    };
-
-    await checkoutCredits(transaction);
+    await checkoutCredits(planId);
   };
 
   return (
