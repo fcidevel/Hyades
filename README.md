@@ -158,7 +158,6 @@ hyades/
 ├── postcss.config.mjs            # PostCSS configuration
 ├── tailwind.config.ts            # Tailwind CSS configuration
 ├── tsconfig.json                 # TypeScript configuration
-├── .env.example                  # Environment variable template
 └── package.json                  # Dependencies & scripts
 ```
 
@@ -255,7 +254,6 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
    ```
 
 3. **Set up environment variables**
-   - Copy `.env.example` to `.env.local`
    - Fill in your credentials (see Environment Variables)
 
 4. **Set up webhooks**
