@@ -3,7 +3,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { connectToDatabase } from "../database/mongoose";
-import { AppError, toAppError } from "../errors";
+import { AppError, logError, toAppError } from "../errors";
 import { redirect } from "next/navigation";
 import User from "../database/models/user.model";
 import Image from "../database/models/image.model";
@@ -110,6 +110,29 @@ export async function getImageById(imageId: string) {
   }
 }
 
+// Cloudinary's search belongs to its rate-limited Admin API (500 requests an hour on the Free
+// plan), so the home page calls it only for an actual search, and a failed search finds nothing
+// instead of taking the page down.
+async function searchPublicIds(searchQuery: string): Promise<string[]> {
+  try {
+    cloudinary.config({
+      cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+      secure: true,
+    });
+
+    const { resources } = await cloudinary.search
+      .expression(`folder=hyades AND ${searchQuery}`)
+      .execute();
+
+    return resources.map((resource: any) => resource.public_id);
+  } catch (error) {
+    logError("getAllImages:search", error);
+    return [];
+  }
+}
+
 // GET ALL IMAGES
 export async function getAllImages({
   limit = 9,
@@ -123,31 +146,12 @@ export async function getAllImages({
   try {
     await connectToDatabase();
 
-    cloudinary.config({
-      cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET,
-      secure: true,
-    });
-
-    let expression = "folder=hyades";
-
-    if (searchQuery) {
-      expression += ` AND ${searchQuery}`;
-    }
-
-    const { resources } = await cloudinary.search
-      .expression(expression)
-      .execute();
-
-    const resourceIds = resources.map((resource: any) => resource.public_id);
-
     let query = {};
 
     if (searchQuery) {
       query = {
         publicId: {
-          $in: resourceIds,
+          $in: await searchPublicIds(searchQuery),
         },
       };
     }
