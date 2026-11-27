@@ -5,15 +5,22 @@ import stripe from "stripe";
 export async function POST(request: Request) {
   const body = await request.text();
 
-  const sig = request.headers.get("stripe-signature") as string;
+  const sig = request.headers.get("stripe-signature");
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+
+  // Anything that is not a correctly signed Stripe event gets a 400 with no details, so Stripe
+  // reports a failed delivery and a caller learns nothing.
+  if (!sig) {
+    return new Response("Missing signature", { status: 400 });
+  }
 
   let event;
 
   try {
     event = stripe.webhooks.constructEvent(body, sig, endpointSecret);
-  } catch (err) {
-    return NextResponse.json({ message: "Webhook error", error: err });
+  } catch {
+    console.warn("[stripe-webhook] signature verification failed");
+    return new Response("Invalid signature", { status: 400 });
   }
 
   // Get the ID and type
