@@ -114,6 +114,16 @@ export async function getImageById(imageId: string) {
 // plan), so the home page calls it only for an actual search, and a failed search finds nothing
 // instead of taking the page down.
 async function searchPublicIds(searchQuery: string): Promise<string[]> {
+  // The visitor's text never becomes search syntax: keep letters, digits, "_", "-" and ".",
+  // quote each word, and keep the folder restriction outside the visitor's part.
+  const words = searchQuery
+    .replace(/[^\p{L}\p{N}\s_.-]/gu, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 5)
+    .map((word) => word.slice(0, 40));
+  if (words.length === 0) return [];
+
   try {
     cloudinary.config({
       cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
@@ -123,7 +133,9 @@ async function searchPublicIds(searchQuery: string): Promise<string[]> {
     });
 
     const { resources } = await cloudinary.search
-      .expression(`folder=hyades AND ${searchQuery}`)
+      .expression(
+        `folder=hyades AND (${words.map((word) => `"${word}"`).join(" AND ")})`
+      )
       .execute();
 
     return resources.map((resource: any) => resource.public_id);
