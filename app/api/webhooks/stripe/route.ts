@@ -27,8 +27,18 @@ export async function POST(request: Request) {
   const eventType = event.type;
 
   // CREATE
-  if (eventType === "checkout.session.completed") {
-    const { id, amount_total, metadata } = event.data.object;
+  // Credits are added only once the money is in. A delayed payment method completes the Checkout
+  // session with payment_status "unpaid"; Stripe then sends
+  // checkout.session.async_payment_succeeded when the payment settles.
+  if (
+    eventType === "checkout.session.completed" ||
+    eventType === "checkout.session.async_payment_succeeded"
+  ) {
+    const { id, amount_total, metadata, payment_status } = event.data.object;
+
+    if (payment_status !== "paid") {
+      return new Response("", { status: 200 });
+    }
 
     const transaction = {
       stripeId: id,
